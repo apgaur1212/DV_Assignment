@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DV Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>Multiview Data Visualization Dashboard</h1>
+  <div id="vis"></div>
+  <script type="text/javascript">
+    const spec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "Multiview dashboard with global item filter.",
+      "params": [
+        {
+          "name": "ItemFilter",
+          "bind": {
+            "input": "select",
+            "options": [
+              null, ]
+          }
+        }
+      ],
+      "vconcat": [
+        {
+          "hconcat": [
+            {
+              "title": "Total Sales by Representative (Donut Chart)",
+              "width": 300,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [
+                {
+                  "aggregate": [
+                    { "op": "sum", "field": "Total", "as": "TotalSum" }
+                  ],
+                  "groupby": ["Rep"]
+                }
+              ],
+              "mark": { "type": "arc", "innerRadius": 80 },
+              "encoding": {
+                "theta": { "field": "TotalSum", "type": "quantitative" },
+                "color": { "field": "Rep", "type": "nominal" },
+                "tooltip": [
+                  { "field": "Rep", "type": "nominal" },
+                  { "field": "TotalSum", "type": "quantitative", "title": "Total" }
+                ]
+              },
+              "view": { "stroke": null }
+            },
+            {
+              "title": "Units vs Unit Cost by Item",
+              "width": 400,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [{ "filter": "ItemFilter == null || datum.Item == ItemFilter" }],
+              "mark": "point",
+              "encoding": {
+                "x": { "field": "Units", "type": "quantitative" },
+                "y": { "field": "Unit Cost", "type": "quantitative" },
+                "color": { "field": "Item", "type": "nominal" },
+                "tooltip": [
+                  { "field": "Item", "type": "nominal" },
+                  { "field": "Units", "type": "quantitative" },
+                  { "field": "Unit Cost", "type": "quantitative" }
+                ]
+              },
+              "view": { "stroke": null }
+            },
+            {
+              "title": "Monthly Total Sales by Item (Streamgraph)",
+              "width": 500,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [
+                { "filter": "datum.OrderDate != null && datum.OrderDate !== ''" },
+                { "calculate": "toDate(datum.OrderDate)", "as": "ParsedDate" },
+                { "timeUnit": "yearmonth", "field": "ParsedDate", "as": "Month" },
+                { "filter": "ItemFilter == null || datum.Item == ItemFilter" },
+                {
+                  "aggregate": [
+                    { "op": "sum", "field": "Total", "as": "TotalSum" }
+                  ],
+                  "groupby": ["Month", "Item"]
+                }
+              ],
+              "mark": { "type": "area", "interpolate": "monotone" },
+              "encoding": {
+                "x": { "field": "Month", "type": "temporal" },
+                "y": { "field": "TotalSum", "type": "quantitative", "stack": "center" },
+                "color": { "field": "Item", "type": "nominal" },
+                "tooltip": [
+                  { "field": "Month", "type": "temporal" },
+                  { "field": "Item", "type": "nominal" },
+                  { "field": "TotalSum", "type": "quantitative" }
+                ]
+              },
+              "view": { "stroke": null }
+            }
+          ]
+        },
+        {
+          "hconcat": [
+            {
+              "title": "Histogram of Units with Global Mean Overlay",
+              "width": 500,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [{ "filter": "ItemFilter == null || datum.Item == ItemFilter" }],
+              "layer": [
+                {
+                  "mark": "bar",
+                  "encoding": {
+                    "x": {
+                      "field": "Units",
+                      "bin": { "maxbins": 20 },
+                      "type": "quantitative"
+                    },
+                    "y": {
+                      "aggregate": "count",
+                      "type": "quantitative"
+                    },
+                    "tooltip": [
+                      { "field": "Units", "bin": true, "type": "quantitative" },
+                      { "aggregate": "count", "field": "Units", "type": "quantitative" }
+                    ]
+                  }
+                },
+                {
+                  "mark": {
+                    "type": "rule",
+                    "color": "red",
+                    "size": 2,
+                    "strokeDash": [4, 4]
+                  },
+                  "encoding": {
+                    "x": {
+                      "aggregate": "mean",
+                      "field": "Units",
+                      "type": "quantitative"
+                    }
+                  }
+                }
+              ],
+              "view": { "stroke": null }
+            },
+            {
+              "title": "Total Sales by Region",
+              "width": 400,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [
+                {
+                  "aggregate": [
+                    { "op": "sum", "field": "Total", "as": "TotalSales" }
+                  ],
+                  "groupby": ["Region"]
+                }
+              ],
+              "mark": "bar",
+              "encoding": {
+                "x": { "field": "Region", "type": "nominal" },
+                "y": { "field": "TotalSales", "type": "quantitative" },
+                "color": { "field": "Region", "type": "nominal" },
+                "tooltip": [
+                  { "field": "Region", "type": "nominal" },
+                  { "field": "TotalSales", "type": "quantitative" }
+                ]
+              },
+              "view": { "stroke": null }
+            },
+            {
+              "title": "Average Unit Cost Over Time",
+              "width": 500,
+              "height": 300,
+              "data": {
+                "url": "https://raw.githubusercontent.com/apgaur1212/DV_Assignment/refs/heads/main/cleaned_total_column.csv",
+                "format": { "type": "csv" }
+              },
+              "transform": [
+                { "filter": "datum.OrderDate != null && datum.OrderDate !== ''" },
+                { "calculate": "toDate(datum.OrderDate)", "as": "ParsedDate" },
+                { "timeUnit": "yearmonth", "field": "ParsedDate", "as": "Month" },
+                { "filter": "ItemFilter == null || datum.Item == ItemFilter" },
+                {
+                  "aggregate": [
+                    { "op": "mean", "field": "Unit Cost", "as": "AvgUnitCost" }
+                  ],
+                  "groupby": ["Month"]
+                }
+              ],
+              "mark": { "type": "line", "point": true },
+              "encoding": {
+                "x": { "field": "Month", "type": "temporal" },
+                "y": { "field": "AvgUnitCost", "type": "quantitative" },
+                "tooltip": [
+                  { "field": "Month", "type": "temporal" },
+                  { "field": "AvgUnitCost", "type": "quantitative" }
+                ]
+              },
+              "view": { "stroke": null }
+            }
+          ]
+        }
+      ]
+    };
+
+    vegaEmbed('#vis', spec).then(result => {}).catch(console.error);
+  </script>
+</body>
+</html>
+    
